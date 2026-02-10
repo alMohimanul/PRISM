@@ -1,16 +1,101 @@
+# Python
 prism-venv/
 venv/
+.venv/
+env/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 *.db
 *.sqlite3
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Node / Frontend
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
 *.log
-*.bak
-*.swp
-*.swo
-*.tmp
-*.DS_Store
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*~
+
+# Docker
+.docker/
+
+# Misc
+.cache/
+temp/
+tmp/
+
+# PRISM specific
+data/
+*.faiss
+*.pkl
