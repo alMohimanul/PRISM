@@ -16,7 +16,9 @@ export function ChatContainer() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Get messages for current session from store
-  const messages = currentSession ? getSessionMessages(currentSession.session_id) : [];
+  const messages = useMemo(() => {
+    return currentSession ? getSessionMessages(currentSession.session_id) : [];
+  }, [currentSession, getSessionMessages]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   const scrollToBottom = useCallback(() => {
@@ -116,7 +118,7 @@ export function ChatContainer() {
               </div>
             </div>
           ) : (
-            messages.map((message, idx) => (
+            messages.map((message, idx: number) => (
               <MessageBubble key={idx} message={message} />
             ))
           )}

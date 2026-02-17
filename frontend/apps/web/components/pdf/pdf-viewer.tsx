@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
@@ -39,24 +39,10 @@ export function PDFViewer({
     if (initialPage !== pageNumber) {
       setPageNumber(initialPage);
     }
-  }, [initialPage]);
+  }, [initialPage, pageNumber]);
 
-  useEffect(() => {
-    // Highlight text when it changes or page changes
-    if (highlightText && pageRef.current) {
-      // Delay to ensure text layer is rendered
-      const timer = setTimeout(() => {
-        highlightTextInPage(highlightText);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightText, pageNumber]);
-
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-  }
-
-  function highlightTextInPage(text: string) {
+  // Define highlightTextInPage before it's used in useEffect
+  const highlightTextInPage = useCallback((text: string) => {
     if (!pageRef.current) {
       console.log('❌ No pageRef');
       return;
@@ -127,6 +113,21 @@ export function PDFViewer({
       console.log('⚠️ Text not found on this page');
       console.log('💡 Try navigating to a different page');
     }
+  }, []);
+
+  useEffect(() => {
+    // Highlight text when it changes or page changes
+    if (highlightText && pageRef.current) {
+      // Delay to ensure text layer is rendered
+      const timer = setTimeout(() => {
+        highlightTextInPage(highlightText);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightText, pageNumber, highlightTextInPage]);
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
   }
 
   function changePage(offset: number) {
