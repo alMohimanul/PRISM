@@ -15,7 +15,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const openPdfViewer = useAppStore((state: any) => state.openPdfViewer);
+  const openPdfViewer = useAppStore((state) => state.openPdfViewer);
 
   // Build a map of chunk_id -> source
   const sourcesMap = useMemo(() => {
