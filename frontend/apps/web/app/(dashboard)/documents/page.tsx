@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Grid, List, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

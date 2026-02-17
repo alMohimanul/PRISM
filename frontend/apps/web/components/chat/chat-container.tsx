@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageBubble } from './message';
 import { ChatInput } from './chat-input';
@@ -16,7 +16,9 @@ export function ChatContainer() {
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Get messages for current session from store
-  const messages = currentSession ? getSessionMessages(currentSession.session_id) : [];
+  const messages = useMemo(() => {
+    return currentSession ? getSessionMessages(currentSession.session_id) : [];
+  }, [currentSession, getSessionMessages]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   const scrollToBottom = useCallback(() => {
