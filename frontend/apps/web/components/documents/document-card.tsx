@@ -3,7 +3,7 @@
 import { FileText, Trash2, Eye } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatDate, formatFileSize, truncate } from '@/lib/utils';
+import { formatDate, formatFileSize } from '@/lib/utils';
 import type { Document } from '@/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '@/lib/api';
