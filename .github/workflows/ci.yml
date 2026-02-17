@@ -3,8 +3,7 @@ name: PRISM CI/CD
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  # Removed pull_request trigger - checks run after merge to main/develop
 
 jobs:
   backend-lint-and-typecheck:
