@@ -117,7 +117,7 @@ export function ChatContainer() {
               </div>
             </div>
           ) : (
-            messages.map((message, idx) => (
+            messages.map((message, idx: number) => (
               <MessageBubble key={idx} message={message} />
             ))
           )}
