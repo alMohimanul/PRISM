@@ -55,6 +55,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     vector_store = VectorStoreService(
         index_path=settings.faiss_index_path,
         embedding_model=settings.embedding_model,
+        reranker_model=settings.reranker_model if settings.enable_reranking else None,
+        enable_reranking=settings.enable_reranking,
     )
 
     logger.info("Initializing session manager...")
@@ -69,6 +71,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         vector_store=vector_store,
         groq_api_key=settings.groq_api_key,
         groq_model=settings.groq_model,
+        reranker_top_k=settings.reranker_top_k,
+        final_top_k=settings.final_top_k,
     )
 
     # Inject dependencies into route modules

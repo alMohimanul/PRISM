@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Vector Database (FAISS)
     faiss_index_path: str = Field(default="./data/faiss_index", alias="FAISS_INDEX_PATH")
 
+    # PDF Storage
+    pdf_storage_path: str = Field(default="./data/pdfs", alias="PDF_STORAGE_PATH")
+
     # LLM Configuration
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     groq_model: str = Field(default="llama-3.1-70b-versatile", alias="GROQ_MODEL")
@@ -36,6 +39,14 @@ class Settings(BaseSettings):
     embedding_model: str = Field(
         default="sentence-transformers/all-MiniLM-L6-v2", alias="EMBEDDING_MODEL"
     )
+
+    # Reranking Configuration
+    enable_reranking: bool = Field(default=True, alias="ENABLE_RERANKING")
+    reranker_model: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2", alias="RERANKER_MODEL"
+    )
+    reranker_top_k: int = Field(default=20, alias="RERANKER_TOP_K")
+    final_top_k: int = Field(default=5, alias="FINAL_TOP_K")
 
     # PDF Processing
     max_file_size_mb: int = Field(default=50, alias="MAX_FILE_SIZE_MB")

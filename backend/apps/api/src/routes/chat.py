@@ -66,13 +66,19 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         response_text = result["response"]
         sources = result.get("sources", [])
+        confidence = result.get("confidence", 0.0)
+        unsupported_spans = result.get("unsupported_spans", [])
 
         # Add assistant response to session
         await session_manager.add_message(
             session_id=request.session_id,
             role="assistant",
             content=response_text,
-            metadata={"sources": sources},
+            metadata={
+                "sources": sources,
+                "confidence": confidence,
+                "unsupported_spans": unsupported_spans,
+            },
         )
 
         return ChatResponse(
@@ -80,6 +86,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
             message=response_text,
             agent_type="literature_reviewer",
             sources=sources,
+            confidence=confidence,
+            unsupported_spans=unsupported_spans,
             timestamp=datetime.utcnow(),
         )
 

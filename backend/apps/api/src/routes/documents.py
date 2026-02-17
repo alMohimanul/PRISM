@@ -1,6 +1,7 @@
 """Document upload and management endpoints."""
 
 import os
+import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,9 @@ from typing import List
 
 import aiofiles
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 
+from ..config import settings
 from ..models.request import UploadDocumentResponse
 from ..models.response import DocumentMetadata
 from ..services.pdf_processor import PDFProcessor
@@ -63,8 +66,22 @@ async def upload_document(file: UploadFile = File(...)) -> UploadDocumentRespons
         # Generate document ID
         document_id = PDFProcessor.generate_document_id(temp_path)
 
+        # Create PDF storage directory if it doesn't exist
+        pdf_storage = Path(settings.pdf_storage_path)
+        pdf_storage.mkdir(parents=True, exist_ok=True)
+
+        # Store PDF permanently
+        stored_pdf_path = pdf_storage / f"{document_id}.pdf"
+        shutil.copy(temp_path, stored_pdf_path)
+
         # Process PDF
-        metadata, chunks = await pdf_processor.process_pdf(temp_path)
+        try:
+            metadata, chunks = await pdf_processor.process_pdf(temp_path)
+        except Exception as e:
+            print(f"Error processing PDF: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
         # Add to vector store
         texts = [chunk.text for chunk in chunks]
@@ -158,6 +175,32 @@ async def get_document(document_id: str) -> DocumentMetadata:
     )
 
 
+@router.get("/{document_id}/pdf")
+async def serve_pdf(document_id: str) -> FileResponse:
+    """Serve the PDF file for a document.
+
+    Args:
+        document_id: Document identifier
+
+    Returns:
+        PDF file response
+    """
+    pdf_storage = Path(settings.pdf_storage_path)
+    pdf_path = pdf_storage / f"{document_id}.pdf"
+
+    if not pdf_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PDF file not found",
+        )
+
+    return FileResponse(
+        path=pdf_path,
+        media_type="application/pdf",
+        filename=f"{document_id}.pdf",
+    )
+
+
 @router.delete("/{document_id}")
 async def delete_document(document_id: str) -> dict:
     """Delete a document from the system.
@@ -175,5 +218,11 @@ async def delete_document(document_id: str) -> dict:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         )
+
+    # Also delete the stored PDF file
+    pdf_storage = Path(settings.pdf_storage_path)
+    pdf_path = pdf_storage / f"{document_id}.pdf"
+    if pdf_path.exists():
+        pdf_path.unlink()
 
     return {"message": "Document deleted successfully", "document_id": document_id}

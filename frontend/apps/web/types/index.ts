@@ -21,12 +21,27 @@ export interface Session {
   message_count: number;
 }
 
+export interface EvidenceSource {
+  chunk_id: string;
+  document_id: string;
+  text: string;
+  score: number;
+  page?: number;
+}
+
+export interface UnsupportedSpan {
+  text: string;
+  reason: string;
+}
+
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
   metadata?: {
-    sources?: Source[];
+    sources?: EvidenceSource[];
+    confidence?: number;
+    unsupported_spans?: UnsupportedSpan[];
   };
 }
 
@@ -40,7 +55,9 @@ export interface ChatResponse {
   session_id: string;
   message: string;
   agent_type: string;
-  sources?: Source[];
+  sources?: EvidenceSource[];
+  confidence: number;
+  unsupported_spans: UnsupportedSpan[];
   timestamp: string;
 }
 

@@ -130,6 +130,8 @@ To run both backend and frontend:
 
 ```bash
 # Terminal 1: Start database services
+colima start 
+
 make dev-services
 
 # Terminal 2: Start backend API

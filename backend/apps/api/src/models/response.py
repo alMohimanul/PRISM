@@ -33,14 +33,35 @@ class SessionResponse(BaseModel):
     message_count: int = Field(default=0, description="Number of messages in session")
 
 
+class EvidenceSource(BaseModel):
+    """Evidence source with grounding information."""
+
+    chunk_id: str = Field(..., description="Chunk identifier")
+    document_id: str = Field(..., description="Source document ID")
+    text: str = Field(..., description="Full chunk text")
+    score: float = Field(..., description="Relevance score")
+    page: Optional[int] = Field(None, description="Page number in document")
+
+
+class UnsupportedSpan(BaseModel):
+    """Unsupported text span in answer."""
+
+    text: str = Field(..., description="Unsupported text")
+    reason: str = Field(..., description="Reason why it's unsupported")
+
+
 class ChatResponse(BaseModel):
     """Chat response from agent."""
 
     session_id: str = Field(..., description="Session identifier")
     message: str = Field(..., description="Agent response")
     agent_type: str = Field(..., description="Agent that handled the request")
-    sources: Optional[List[Dict[str, Any]]] = Field(
-        None, description="Source documents/citations"
+    sources: Optional[List[EvidenceSource]] = Field(
+        None, description="Evidence sources with grounding"
+    )
+    confidence: float = Field(0.0, description="Answer confidence score (0-1)")
+    unsupported_spans: List[UnsupportedSpan] = Field(
+        default_factory=list, description="Text spans not supported by evidence"
     )
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 

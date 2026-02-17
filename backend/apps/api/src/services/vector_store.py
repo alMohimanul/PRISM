@@ -10,16 +10,26 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
+from .reranker import RerankerService
+
 
 class VectorStoreService:
     """Service for managing FAISS vector store and embeddings."""
 
-    def __init__(self, index_path: str, embedding_model: str):
+    def __init__(
+        self,
+        index_path: str,
+        embedding_model: str,
+        reranker_model: Optional[str] = None,
+        enable_reranking: bool = False
+    ):
         """Initialize vector store service.
 
         Args:
             index_path: Path to store FAISS index and metadata
             embedding_model: Name of the sentence-transformers model
+            reranker_model: Optional name of the cross-encoder reranker model
+            enable_reranking: Whether to enable reranking
         """
         self.index_path = Path(index_path)
         self.index_path.mkdir(parents=True, exist_ok=True)
@@ -31,6 +41,12 @@ class VectorStoreService:
         # Initialize embedding model
         self.embedding_model = SentenceTransformer(embedding_model)
         self.embedding_dim = self.embedding_model.get_sentence_embedding_dimension()
+
+        # Initialize reranker if enabled
+        self.enable_reranking = enable_reranking
+        self.reranker: Optional[RerankerService] = None
+        if enable_reranking and reranker_model:
+            self.reranker = RerankerService(reranker_model)
 
         # Initialize or load FAISS index
         self.index: Optional[faiss.IndexFlatL2] = None
@@ -118,14 +134,19 @@ class VectorStoreService:
         self._save_index()
 
     def search(
-        self, query: str, top_k: int = 5, filter_document_id: Optional[str] = None
+        self,
+        query: str,
+        top_k: int = 5,
+        filter_document_id: Optional[str] = None,
+        reranker_top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        """Search for similar chunks using semantic similarity.
+        """Search for similar chunks using semantic similarity with optional reranking.
 
         Args:
             query: Search query
-            top_k: Number of results to return
+            top_k: Number of final results to return
             filter_document_id: Optional document ID to filter results
+            reranker_top_k: Number of candidates to retrieve before reranking (default: top_k * 4)
 
         Returns:
             List of search results with text, metadata, and scores
@@ -133,11 +154,21 @@ class VectorStoreService:
         if self.index.ntotal == 0:
             return []
 
+        # Determine number of candidates to retrieve
+        if self.enable_reranking and self.reranker:
+            # Retrieve more candidates for reranking
+            if reranker_top_k is None:
+                reranker_top_k = top_k * 4
+            initial_k = min(reranker_top_k, self.index.ntotal)
+        else:
+            # No reranking, retrieve 2x for filtering
+            initial_k = min(top_k * 2, self.index.ntotal)
+
         # Generate query embedding
         query_embedding = self.embedding_model.encode([query], convert_to_numpy=True)
 
         # Search FAISS index
-        distances, indices = self.index.search(query_embedding, min(top_k * 2, self.index.ntotal))
+        distances, indices = self.index.search(query_embedding, initial_k)
 
         # Format results
         results = []
@@ -165,8 +196,12 @@ class VectorStoreService:
                 }
             )
 
-            if len(results) >= top_k:
-                break
+        # Apply reranking if enabled
+        if self.enable_reranking and self.reranker and results:
+            results = self.reranker.rerank(query, results, top_k=top_k)
+        else:
+            # No reranking, just return top_k
+            results = results[:top_k]
 
         return results
 

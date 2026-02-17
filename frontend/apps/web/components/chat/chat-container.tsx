@@ -63,6 +63,8 @@ export function ChatContainer() {
         timestamp: response.timestamp,
         metadata: {
           sources: response.sources,
+          confidence: response.confidence,
+          unsupported_spans: response.unsupported_spans,
         },
       };
       addMessage(currentSession.session_id, assistantMessage);
