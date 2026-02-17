@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Upload, FileText, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Upload, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from '@/lib/api';
-import { cn, formatFileSize } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export function UploadZone() {
   const [isDragging, setIsDragging] = useState(false);

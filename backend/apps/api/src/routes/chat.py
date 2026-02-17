@@ -58,10 +58,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
     )
 
     try:
-        # Query the agent
+        # Query the agent with optional document filtering
         result = await literature_agent.query_with_history(
             question=request.message,
             chat_history=chat_history,
+            document_ids=request.document_ids,
         )
 
         response_text = result["response"]

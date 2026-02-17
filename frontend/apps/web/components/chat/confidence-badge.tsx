@@ -69,7 +69,7 @@ export function ConfidenceBadge({ confidence, unsupported_spans = [] }: Confiden
                 key={idx}
                 className="text-xs rounded border border-yellow-500/20 bg-yellow-500/5 px-2 py-1"
               >
-                <p className="text-yellow-200/90">"{span.text}"</p>
+                <p className="text-yellow-200/90">&ldquo;{span.text}&rdquo;</p>
                 <p className="text-yellow-500/60 text-[10px] mt-0.5">{span.reason}</p>
               </div>
             ))}

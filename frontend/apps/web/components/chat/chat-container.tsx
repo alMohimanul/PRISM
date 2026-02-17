@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { MessageBubble } from './message';
 import { ChatInput } from './chat-input';
 import { useAppStore } from '@/lib/store';
@@ -10,21 +10,20 @@ import type { Message } from '@/types';
 import { Bot } from 'lucide-react';
 
 export function ChatContainer() {
-  const { currentSession, sessionMessages, addMessage, getSessionMessages } = useAppStore();
+  const { currentSession, addMessage, getSessionMessages, selectedDocuments } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Get messages for current session from store
   const messages = currentSession ? getSessionMessages(currentSession.session_id) : [];
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (shouldAutoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }, [shouldAutoScroll]);
 
   // Check if user is near the bottom of the scroll container
   const handleScroll = () => {
@@ -38,7 +37,7 @@ export function ChatContainer() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   // Send message mutation
   const sendMessageMutation = useMutation({
@@ -53,8 +52,9 @@ export function ChatContainer() {
       };
       addMessage(currentSession.session_id, userMessage);
 
-      // Call API
-      const response = await chatApi.sendMessage(currentSession.session_id, message);
+      // Call API with selected documents if any
+      const documentIds = selectedDocuments.size > 0 ? Array.from(selectedDocuments) : undefined;
+      const response = await chatApi.sendMessage(currentSession.session_id, message, undefined, documentIds);
 
       // Add assistant response to store
       const assistantMessage: Message = {

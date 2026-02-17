@@ -21,6 +21,9 @@ class AgentState(TypedDict):
     confidence: float
     unsupported_spans: List[Dict[str, Any]]
     error: Optional[str]
+    # Multi-document support
+    document_id: Optional[str]  # Single document filter (deprecated)
+    document_ids: Optional[List[str]]  # Multi-document filter
 
 
 class LiteratureReviewerAgent:
@@ -98,9 +101,16 @@ class LiteratureReviewerAgent:
             # Phase 2: Retrieve larger candidate pool
             # We retrieve more candidates (top 30-50) for better section filtering
             candidate_pool_size = min(50, self.reranker_top_k * 2)
+
+            # Get document filters from state
+            filter_document_id = state.get("document_id")
+            filter_document_ids = state.get("document_ids")
+
             results = self.vector_store.search(
                 query,
                 top_k=candidate_pool_size,
+                filter_document_id=filter_document_id,
+                filter_document_ids=filter_document_ids,
                 reranker_top_k=candidate_pool_size
             )
 
@@ -312,19 +322,35 @@ class LiteratureReviewerAgent:
             ]
         )
 
+        # Check if this is a multi-document query
+        unique_docs = set(c['document_id'] for c in context)
+        is_multi_doc = len(unique_docs) > 1
+
         # Build prompt for draft generation
-        system_prompt = """You are an expert research assistant. Answer questions using ONLY the provided chunks.
-
-CRITICAL: Return ONLY a valid JSON object, nothing else. No explanations, no markdown.
-
-Requirements:
+        base_requirements = """Requirements:
 1. Cite chunks using [c1], [c2] format in your answer
 2. Only use information explicitly in the chunks
 3. If info is missing, state "The provided context does not contain information about..."
-4. List all chunk IDs you referenced
+4. List all chunk IDs you referenced"""
+
+        multi_doc_requirements = """
+5. When comparing/contrasting multiple papers, explicitly identify which findings come from which document
+6. Synthesize insights across documents by highlighting agreements, disagreements, and complementary findings
+7. If asked to compare, structure your answer to clearly show similarities and differences"""
+
+        if is_multi_doc:
+            requirements_text = base_requirements + multi_doc_requirements
+        else:
+            requirements_text = base_requirements
+
+        system_prompt = f"""You are an expert research assistant. Answer questions using ONLY the provided chunks.
+
+CRITICAL: Return ONLY a valid JSON object, nothing else. No explanations, no markdown.
+
+{requirements_text}
 
 Exact JSON format:
-{"answer": "Your answer with [c1] citations...", "used_chunks": ["c1", "c3"]}"""
+{{"answer": "Your answer with [c1] citations...", "used_chunks": ["c1", "c3"]}}"""
 
         user_prompt = f"""Chunks:
 
@@ -351,6 +377,7 @@ JSON only:"""
             # Try to extract JSON from response
             try:
                 import re
+                import json
 
                 # Remove markdown code blocks if present
                 cleaned_text = response_text
@@ -360,12 +387,33 @@ JSON only:"""
                     if match:
                         cleaned_text = match.group(1)
 
-                # Try to find JSON object in the response
-                json_match = re.search(r'\{[^}]*"answer"[^}]*\}', cleaned_text, re.DOTALL)
-                if json_match:
-                    cleaned_text = json_match.group(0)
+                # Try direct JSON parse first
+                try:
+                    draft_data = json.loads(cleaned_text)
+                except json.JSONDecodeError:
+                    # If that fails, try to find the JSON object more carefully
+                    # Look for opening brace and match balanced braces
+                    start = cleaned_text.find('{')
+                    if start != -1:
+                        brace_count = 0
+                        end = start
+                        for i in range(start, len(cleaned_text)):
+                            if cleaned_text[i] == '{':
+                                brace_count += 1
+                            elif cleaned_text[i] == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end = i + 1
+                                    break
 
-                draft_data = json.loads(cleaned_text)
+                        if end > start:
+                            json_str = cleaned_text[start:end]
+                            draft_data = json.loads(json_str)
+                        else:
+                            raise json.JSONDecodeError("No valid JSON found", cleaned_text, 0)
+                    else:
+                        raise json.JSONDecodeError("No JSON object found", cleaned_text, 0)
+
                 state["draft_answer"] = draft_data.get("answer", "")
                 state["used_chunks"] = draft_data.get("used_chunks", [])
 
@@ -375,7 +423,7 @@ JSON only:"""
                     chunk_ids = re.findall(r'\[c(\d+)\]', response_text)
                     state["used_chunks"] = [f"c{cid}" for cid in chunk_ids]
 
-            except (json.JSONDecodeError, AttributeError):
+            except (json.JSONDecodeError, AttributeError, ValueError) as parse_error:
                 # Fallback: treat entire response as answer, extract chunk IDs
                 import re
                 state["draft_answer"] = response_text
@@ -507,12 +555,18 @@ Check if each statement in the answer is supported by the chunks. Return JSON on
 
         return state
 
-    async def query(self, question: str, document_id: Optional[str] = None) -> Dict[str, Any]:
+    async def query(
+        self,
+        question: str,
+        document_id: Optional[str] = None,
+        document_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """Query the agent with a question.
 
         Args:
             question: User question
-            document_id: Optional document ID to filter context
+            document_id: Optional single document ID to filter context (deprecated, use document_ids)
+            document_ids: Optional list of document IDs to filter context (for multi-doc queries)
 
         Returns:
             Response dictionary with answer, sources, confidence, and validation
@@ -528,6 +582,8 @@ Check if each statement in the answer is supported by the chunks. Return JSON on
             "confidence": 0.0,
             "unsupported_spans": [],
             "error": None,
+            "document_id": document_id,
+            "document_ids": document_ids,
         }
 
         # Run the graph
@@ -542,18 +598,23 @@ Check if each statement in the answer is supported by the chunks. Return JSON on
         }
 
     async def query_with_history(
-        self, question: str, chat_history: List[Dict[str, str]], document_id: Optional[str] = None
+        self,
+        question: str,
+        chat_history: List[Dict[str, str]],
+        document_id: Optional[str] = None,
+        document_ids: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Query the agent with conversation history for context.
 
         Args:
             question: User question
             chat_history: Previous conversation messages
-            document_id: Optional document ID to filter context
+            document_id: Optional single document ID to filter context (deprecated, use document_ids)
+            document_ids: Optional list of document IDs to filter context (for multi-doc queries)
 
         Returns:
             Response dictionary with answer and sources
         """
         # For now, we just use the current question
         # In future, we can implement conversation summarization
-        return await self.query(question, document_id)
+        return await self.query(question, document_id, document_ids)

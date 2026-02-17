@@ -1,6 +1,7 @@
 'use client';
 
 import { ChatContainer } from '@/components/chat/chat-container';
+import { DocumentSelector } from '@/components/chat/document-selector';
 import { PDFViewer } from '@/components/pdf/pdf-viewer';
 import { Card } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
@@ -56,6 +57,11 @@ export default function HomePage() {
 
       {/* Sidebar info */}
       <div className="space-y-6">
+        {/* Document Selector for Multi-Doc Queries */}
+        <Card className="p-6">
+          <DocumentSelector />
+        </Card>
+
         {/* Quick stats */}
         <Card className="p-6">
           <h2 className="text-sm font-semibold text-muted-foreground mb-4">

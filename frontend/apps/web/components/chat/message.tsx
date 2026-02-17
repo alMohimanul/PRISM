@@ -2,11 +2,11 @@
 
 import { formatDate } from '@/lib/utils';
 import type { Message } from '@/types';
-import { User, Bot, FileText } from 'lucide-react';
+import { User, Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ConfidenceBadge } from './confidence-badge';
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 
 interface MessageBubbleProps {
@@ -15,12 +15,12 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const [hoveredCitation, setHoveredCitation] = useState<string | null>(null);
   const openPdfViewer = useAppStore((state) => state.openPdfViewer);
 
   // Build a map of chunk_id -> source
   const sourcesMap = useMemo(() => {
     if (!message.metadata?.sources) return {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const map: Record<string, any> = {};
     message.metadata.sources.forEach((source) => {
       map[source.chunk_id] = source;
