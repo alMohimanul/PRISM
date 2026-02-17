@@ -99,5 +99,6 @@ tmp/
 data/
 *.faiss
 *.pkl
-*.md 
+*.md
 !README.md
+!docs/**/*.md
