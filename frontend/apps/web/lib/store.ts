@@ -65,7 +65,7 @@ export const useAppStore = create<AppState>()(
         })),
       clearSessionMessages: (sessionId) =>
         set((state) => {
-          const { [sessionId]: _, ...rest } = state.sessionMessages;
+          const { [sessionId]: _removed, ...rest } = state.sessionMessages;
           return { sessionMessages: rest };
         }),
       getSessionMessages: (sessionId) => get().sessionMessages[sessionId] || [],
