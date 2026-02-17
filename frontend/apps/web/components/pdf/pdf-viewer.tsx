@@ -41,21 +41,7 @@ export function PDFViewer({
     }
   }, [initialPage, pageNumber]);
 
-  useEffect(() => {
-    // Highlight text when it changes or page changes
-    if (highlightText && pageRef.current) {
-      // Delay to ensure text layer is rendered
-      const timer = setTimeout(() => {
-        highlightTextInPage(highlightText);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightText, pageNumber, highlightTextInPage]);
-
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-  }
-
+  // Define highlightTextInPage before it's used in useEffect
   const highlightTextInPage = useCallback((text: string) => {
     if (!pageRef.current) {
       console.log('❌ No pageRef');
@@ -128,6 +114,21 @@ export function PDFViewer({
       console.log('💡 Try navigating to a different page');
     }
   }, []);
+
+  useEffect(() => {
+    // Highlight text when it changes or page changes
+    if (highlightText && pageRef.current) {
+      // Delay to ensure text layer is rendered
+      const timer = setTimeout(() => {
+        highlightTextInPage(highlightText);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightText, pageNumber, highlightTextInPage]);
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
+  }
 
   function changePage(offset: number) {
     setPageNumber((prevPageNumber) => {
