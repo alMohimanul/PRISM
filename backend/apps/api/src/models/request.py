@@ -21,6 +21,9 @@ class ChatRequest(BaseModel):
     agent_type: Optional[str] = Field(
         None, description="Specific agent to route to (auto-routed if not specified)"
     )
+    document_ids: Optional[List[str]] = Field(
+        None, description="Optional list of document IDs to filter context (for multi-doc queries)"
+    )
 
 
 class CompareMethodologyRequest(BaseModel):

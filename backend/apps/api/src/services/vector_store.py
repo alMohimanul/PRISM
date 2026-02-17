@@ -138,6 +138,7 @@ class VectorStoreService:
         query: str,
         top_k: int = 5,
         filter_document_id: Optional[str] = None,
+        filter_document_ids: Optional[List[str]] = None,
         reranker_top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """Search for similar chunks using semantic similarity with optional reranking.
@@ -145,7 +146,8 @@ class VectorStoreService:
         Args:
             query: Search query
             top_k: Number of final results to return
-            filter_document_id: Optional document ID to filter results
+            filter_document_id: Optional single document ID to filter results (deprecated, use filter_document_ids)
+            filter_document_ids: Optional list of document IDs to filter results (for multi-doc queries)
             reranker_top_k: Number of candidates to retrieve before reranking (default: top_k * 4)
 
         Returns:
@@ -179,7 +181,18 @@ class VectorStoreService:
             metadata = self.metadata[idx]
 
             # Apply filter if specified
-            if filter_document_id and metadata.get("document_id") != filter_document_id:
+            # Support both single doc (backward compat) and multi-doc filtering
+            doc_id = metadata.get("document_id")
+
+            # Build allowed document IDs set
+            allowed_doc_ids = None
+            if filter_document_ids:
+                allowed_doc_ids = set(filter_document_ids)
+            elif filter_document_id:
+                allowed_doc_ids = {filter_document_id}
+
+            # Skip if document not in allowed set
+            if allowed_doc_ids and doc_id not in allowed_doc_ids:
                 continue
 
             results.append(

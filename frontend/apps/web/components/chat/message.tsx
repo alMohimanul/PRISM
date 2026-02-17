@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDate } from '@/lib/utils';
-import type { Message, EvidenceSource } from '@/types';
+import type { Message } from '@/types';
 import { User, Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,8 +20,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   // Build a map of chunk_id -> source
   const sourcesMap = useMemo(() => {
     if (!message.metadata?.sources) return {};
-    const map: Record<string, EvidenceSource> = {};
-    message.metadata.sources.forEach((source: EvidenceSource) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map: Record<string, any> = {};
+    message.metadata.sources.forEach((source) => {
       map[source.chunk_id] = source;
     });
     return map;

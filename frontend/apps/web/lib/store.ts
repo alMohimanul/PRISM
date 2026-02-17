@@ -27,6 +27,12 @@ interface AppState {
   selectedDocument: Document | null;
   setSelectedDocument: (document: Document | null) => void;
 
+  // Selected documents for multi-doc queries
+  selectedDocuments: Set<string>;
+  toggleSelectedDocument: (documentId: string) => void;
+  setSelectedDocuments: (documentIds: string[]) => void;
+  clearSelectedDocuments: () => void;
+
   // PDF Viewer state
   pdfViewerOpen: boolean;
   pdfViewerDocumentId: string | null;
@@ -83,6 +89,22 @@ export const useAppStore = create<AppState>()(
       // Selected document
       selectedDocument: null,
       setSelectedDocument: (document) => set({ selectedDocument: document }),
+
+      // Selected documents for multi-doc queries
+      selectedDocuments: new Set(),
+      toggleSelectedDocument: (documentId) =>
+        set((state) => {
+          const newSet = new Set(state.selectedDocuments);
+          if (newSet.has(documentId)) {
+            newSet.delete(documentId);
+          } else {
+            newSet.add(documentId);
+          }
+          return { selectedDocuments: newSet };
+        }),
+      setSelectedDocuments: (documentIds) =>
+        set({ selectedDocuments: new Set(documentIds) }),
+      clearSelectedDocuments: () => set({ selectedDocuments: new Set() }),
 
       // PDF Viewer
       pdfViewerOpen: false,

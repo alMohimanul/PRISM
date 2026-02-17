@@ -83,12 +83,14 @@ export const chatApi = {
   sendMessage: async (
     sessionId: string,
     message: string,
-    agentType?: string
+    agentType?: string,
+    documentIds?: string[]
   ): Promise<ChatResponse> => {
     const { data } = await api.post('/api/chat', {
       session_id: sessionId,
       message,
       agent_type: agentType,
+      document_ids: documentIds,
     });
     return data;
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageBubble } from './message';
 import { ChatInput } from './chat-input';
@@ -10,7 +10,7 @@ import type { Message } from '@/types';
 import { Bot } from 'lucide-react';
 
 export function ChatContainer() {
-  const { currentSession, addMessage, getSessionMessages } = useAppStore();
+  const { currentSession, addMessage, getSessionMessages, selectedDocuments } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -54,8 +54,9 @@ export function ChatContainer() {
       };
       addMessage(currentSession.session_id, userMessage);
 
-      // Call API
-      const response = await chatApi.sendMessage(currentSession.session_id, message);
+      // Call API with selected documents if any
+      const documentIds = selectedDocuments.size > 0 ? Array.from(selectedDocuments) : undefined;
+      const response = await chatApi.sendMessage(currentSession.session_id, message, undefined, documentIds);
 
       // Add assistant response to store
       const assistantMessage: Message = {
