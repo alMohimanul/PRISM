@@ -4,6 +4,7 @@ import type {
   Session,
   ChatResponse,
   UploadResponse,
+  LiteratureReviewResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -91,6 +92,20 @@ export const chatApi = {
       message,
       agent_type: agentType,
       document_ids: documentIds,
+    });
+    return data;
+  },
+};
+
+// Literature Review
+export const literatureReviewApi = {
+  generate: async (
+    documentIds: string[],
+    researchTopic: string = 'Research Topic'
+  ): Promise<LiteratureReviewResponse> => {
+    const { data } = await api.post('/api/literature-review/generate', {
+      document_ids: documentIds,
+      research_topic: researchTopic,
     });
     return data;
   },

@@ -3,10 +3,10 @@
 import json
 from typing import Any, Dict, List, Optional, TypedDict
 
-from groq import Groq
 from langgraph.graph import END, StateGraph
 
 from ..services.vector_store import VectorStoreService
+from ..services.llm_provider import MultiProviderLLMClient
 
 
 class AgentState(TypedDict):
@@ -32,8 +32,7 @@ class LiteratureReviewerAgent:
     def __init__(
         self,
         vector_store: VectorStoreService,
-        groq_api_key: str,
-        groq_model: str = "llama-3.1-70b-versatile",
+        llm_client: MultiProviderLLMClient,
         reranker_top_k: int = 20,
         final_top_k: int = 5,
     ):
@@ -41,14 +40,12 @@ class LiteratureReviewerAgent:
 
         Args:
             vector_store: Vector store service for retrieving relevant chunks
-            groq_api_key: Groq API key
-            groq_model: Groq model to use
+            llm_client: Multi-provider LLM client (handles Groq + NVIDIA with load balancing)
             reranker_top_k: Number of candidates to retrieve before reranking
             final_top_k: Number of final chunks to use for generation
         """
         self.vector_store = vector_store
-        self.groq_client = Groq(api_key=groq_api_key)
-        self.groq_model = groq_model
+        self.llm_client = llm_client
         self.reranker_top_k = reranker_top_k
         self.final_top_k = final_top_k
 
@@ -361,18 +358,15 @@ Question: {query}
 JSON only:"""
 
         try:
-            # Call Groq API for draft
-            chat_completion = self.groq_client.chat.completions.create(
+            # Call LLM using multi-provider client
+            response_text = self.llm_client.chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                model=self.groq_model,
                 temperature=0.3,  # Lower temperature for more focused responses
                 max_tokens=1024,
             )
-
-            response_text = chat_completion.choices[0].message.content.strip()
 
             # Try to extract JSON from response
             try:
@@ -502,18 +496,15 @@ Referenced chunks:
 Check if each statement in the answer is supported by the chunks. Return JSON only."""
 
         try:
-            # Call Groq API for validation
-            chat_completion = self.groq_client.chat.completions.create(
+            # Call LLM using multi-provider client
+            response_text = self.llm_client.chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                model=self.groq_model,
                 temperature=0.1,  # Very low temperature for validation
                 max_tokens=512,
             )
-
-            response_text = chat_completion.choices[0].message.content.strip()
 
             # Extract JSON
             try:

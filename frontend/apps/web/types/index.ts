@@ -68,3 +68,32 @@ export interface UploadResponse {
   size_bytes: number;
   status: string;
 }
+
+// Literature Review types
+export interface PaperMetadata {
+  document_id: string;
+  title: string;
+  year: number;
+  key_contribution: string;
+  authors: string;
+}
+
+export interface EvolutionSection {
+  era: string;
+  content: string;
+}
+
+export interface ReviewSections {
+  problem: string;
+  evolution: EvolutionSection[];
+  sota: string;
+  gaps: string[];
+  conclusion: string;
+}
+
+export interface LiteratureReviewResponse {
+  full_review: string;
+  papers: PaperMetadata[];
+  sections: ReviewSections;
+  error?: string;
+}

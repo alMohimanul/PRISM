@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageBubble } from './message';
 import { ChatInput } from './chat-input';
+import { ModeSelector, ChatMode } from './mode-selector';
+import { LiteratureReviewViewer } from '../review/literature-review-viewer';
 import { useAppStore } from '@/lib/store';
 import { chatApi } from '@/lib/api';
 import type { Message } from '@/types';
@@ -14,6 +16,9 @@ export function ChatContainer() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+
+  // Mode selection
+  const [chatMode, setChatMode] = useState<ChatMode>('ask');
 
   // Get messages for current session from store
   const messages = useMemo(() => {
@@ -98,7 +103,19 @@ export function ChatContainer() {
     );
   }
 
-  return (
+  // Render based on selected mode
+  const renderContent = () => {
+    // REVIEW MODE
+    if (chatMode === 'review') {
+      return (
+        <LiteratureReviewViewer
+          documentIds={Array.from(selectedDocuments)}
+        />
+      );
+    }
+
+    // ASK MODE (regular chat)
+    return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Messages - Scrollable Container */}
       <div
@@ -153,6 +170,24 @@ export function ChatContainer() {
           isLoading={sendMessageMutation.isPending}
           disabled={!currentSession}
         />
+      </div>
+    </div>
+    );
+  };
+
+  // Main render with mode selector
+  return (
+    <div className="flex h-full flex-col">
+      {/* Mode Selector */}
+      <ModeSelector
+        selectedMode={chatMode}
+        onSelectMode={setChatMode}
+        documentCount={selectedDocuments.size}
+      />
+
+      {/* Content based on mode */}
+      <div className="flex-1 overflow-hidden">
+        {renderContent()}
       </div>
     </div>
   );

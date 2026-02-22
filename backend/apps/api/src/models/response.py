@@ -75,3 +75,78 @@ class MethodologyComparison(BaseModel):
     )
     summary: str = Field(..., description="Summary of key differences")
     generated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DebateTeam(BaseModel):
+    """Team information in debate."""
+
+    name: str = Field(..., description="Team name")
+    documents: List[str] = Field(..., description="Document IDs in this team")
+    score: float = Field(..., description="Team score")
+
+
+class DebateArgument(BaseModel):
+    """Single argument in debate round."""
+
+    argument: str = Field(..., description="The argument text")
+    citations: List[Dict[str, Any]] = Field(..., description="Citation sources")
+    verified: bool = Field(..., description="Whether citations are verified")
+    tone: str = Field(..., description="Tone of the argument")
+
+
+class DebateRound(BaseModel):
+    """Single round of debate."""
+
+    round: int = Field(..., description="Round number")
+    topic: str = Field(..., description="Topic of this round")
+    team_a: DebateArgument = Field(..., description="Team A's argument")
+    team_b: DebateArgument = Field(..., description="Team B's argument")
+    moderator_comment: str = Field(..., description="Moderator's comment")
+    winner: Optional[str] = Field(None, description="Round winner: 'team_a', 'team_b', or 'tie'")
+    scores: Dict[str, float] = Field(..., description="Current scores after round")
+
+
+class DebateResponse(BaseModel):
+    """Complete debate response."""
+
+    team_a: DebateTeam = Field(..., description="Team A information")
+    team_b: DebateTeam = Field(..., description="Team B information")
+    rounds: List[DebateRound] = Field(..., description="All debate rounds")
+    final_verdict: str = Field(..., description="Final verdict and winner")
+    error: Optional[str] = Field(None, description="Error message if any")
+
+
+class PaperMetadata(BaseModel):
+    """Paper metadata in literature review."""
+
+    document_id: str = Field(..., description="Document ID")
+    title: str = Field(..., description="Paper title")
+    year: int = Field(..., description="Publication year")
+    key_contribution: str = Field(..., description="Main contribution")
+    authors: str = Field(..., description="Authors")
+
+
+class EvolutionSection(BaseModel):
+    """Evolution section in literature review."""
+
+    era: str = Field(..., description="Era name/range")
+    content: str = Field(..., description="Section content")
+
+
+class ReviewSections(BaseModel):
+    """Individual sections of literature review."""
+
+    problem: str = Field(..., description="Problem statement")
+    evolution: List[EvolutionSection] = Field(..., description="Evolution sections")
+    sota: str = Field(..., description="State-of-the-art section")
+    gaps: List[str] = Field(..., description="Research gaps")
+    conclusion: str = Field(..., description="Conclusion")
+
+
+class LiteratureReviewResponse(BaseModel):
+    """Literature review response."""
+
+    full_review: str = Field(..., description="Complete literature review in Markdown")
+    papers: List[PaperMetadata] = Field(..., description="Papers reviewed")
+    sections: ReviewSections = Field(..., description="Individual sections")
+    error: Optional[str] = Field(None, description="Error message if any")
