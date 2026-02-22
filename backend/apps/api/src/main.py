@@ -8,11 +8,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .agents.literature_reviewer import LiteratureReviewerAgent
+# from .agents.debate_arena import DebateArenaAgent  # Disabled
+from .agents.literature_review_generator import LiteratureReviewGenerator
 from .config import settings
-from .routes import chat, documents, sessions
+from .routes import chat, documents, sessions, literature_review, cache  # debate disabled
 from .services.pdf_processor import PDFProcessor
 from .services.session_manager import SessionManager
 from .services.vector_store import VectorStoreService
+from .services.llm_provider import MultiProviderLLMClient
+from .services.llm_cache import LLMCache
 
 # Configure logging
 logging.basicConfig(
@@ -26,7 +30,11 @@ logger = logging.getLogger(__name__)
 pdf_processor: PDFProcessor = None
 vector_store: VectorStoreService = None
 session_manager: SessionManager = None
+llm_cache: LLMCache = None
+llm_client: MultiProviderLLMClient = None
 literature_agent: LiteratureReviewerAgent = None
+# debate_agent: DebateArenaAgent = None  # Disabled
+review_generator: LiteratureReviewGenerator = None
 
 
 @asynccontextmanager
@@ -43,7 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting PRISM Research Assistant API")
 
     # Initialize services
-    global pdf_processor, vector_store, session_manager, literature_agent
+    global pdf_processor, vector_store, session_manager, llm_cache, llm_client, literature_agent, review_generator
 
     logger.info("Initializing PDF processor...")
     pdf_processor = PDFProcessor(
@@ -66,19 +74,55 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     await session_manager.connect()
 
+    logger.info("Initializing LLM cache...")
+    llm_cache = LLMCache(
+        redis_url=settings.redis_url,
+        ttl_seconds=86400,  # 24 hours
+        key_prefix="llm_cache:",
+    )
+    await llm_cache.connect()
+
+    logger.info("Initializing Multi-Provider LLM Client...")
+    llm_client = MultiProviderLLMClient(
+        groq_api_key=settings.groq_api_key,
+        groq_model=settings.groq_model,
+        nvidia_api_key=settings.nvidia_api_key,
+        nvidia_model=settings.nvidia_model,
+        nvidia_base_url=settings.nvidia_base_url,
+        min_request_interval=2.0,
+        max_retries=3,
+        cache=llm_cache,
+    )
+
     logger.info("Initializing Literature Reviewer agent...")
     literature_agent = LiteratureReviewerAgent(
         vector_store=vector_store,
-        groq_api_key=settings.groq_api_key,
-        groq_model=settings.groq_model,
+        llm_client=llm_client,
         reranker_top_k=settings.reranker_top_k,
         final_top_k=settings.final_top_k,
+    )
+
+    # Debate Arena disabled
+    # logger.info("Initializing Debate Arena agent...")
+    # debate_agent = DebateArenaAgent(
+    #     vector_store=vector_store,
+    #     groq_api_key=settings.groq_api_key,
+    #     groq_model=settings.groq_model,
+    # )
+
+    logger.info("Initializing Literature Review Generator...")
+    review_generator = LiteratureReviewGenerator(
+        vector_store=vector_store,
+        llm_client=llm_client,
     )
 
     # Inject dependencies into route modules
     documents.set_dependencies(pdf_processor, vector_store)
     sessions.set_dependencies(session_manager)
     chat.set_dependencies(literature_agent, session_manager)
+    # debate.set_dependencies(debate_agent)  # Disabled
+    literature_review.set_dependencies(review_generator)
+    cache.set_dependencies(llm_cache)
 
     logger.info("PRISM API started successfully")
 
@@ -87,6 +131,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     logger.info("Shutting down PRISM Research Assistant API")
     await session_manager.disconnect()
+    await llm_cache.disconnect()
 
 
 # Create FastAPI application
@@ -110,6 +155,9 @@ app.add_middleware(
 app.include_router(documents.router)
 app.include_router(sessions.router)
 app.include_router(chat.router)
+# app.include_router(debate.router)  # Disabled
+app.include_router(literature_review.router)
+app.include_router(cache.router)
 
 
 @app.get("/")

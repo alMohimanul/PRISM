@@ -68,3 +68,74 @@ export interface UploadResponse {
   size_bytes: number;
   status: string;
 }
+
+// Debate types
+export interface DebateCitation {
+  chunk_id: string;
+  document_id: string;
+  text: string;
+  page?: number;
+}
+
+export interface DebateArgument {
+  argument: string;
+  citations: DebateCitation[];
+  verified: boolean;
+  tone: string;
+}
+
+export interface DebateRound {
+  round: number;
+  topic: string;
+  team_a: DebateArgument;
+  team_b: DebateArgument;
+  moderator_comment: string;
+  winner: 'team_a' | 'team_b' | 'tie' | null;
+  scores: {
+    team_a: number;
+    team_b: number;
+  };
+}
+
+export interface DebateTeam {
+  name: string;
+  documents: string[];
+  score: number;
+}
+
+export interface DebateResponse {
+  team_a: DebateTeam;
+  team_b: DebateTeam;
+  rounds: DebateRound[];
+  final_verdict: string;
+  error?: string;
+}
+
+// Literature Review types
+export interface PaperMetadata {
+  document_id: string;
+  title: string;
+  year: number;
+  key_contribution: string;
+  authors: string;
+}
+
+export interface EvolutionSection {
+  era: string;
+  content: string;
+}
+
+export interface ReviewSections {
+  problem: string;
+  evolution: EvolutionSection[];
+  sota: string;
+  gaps: string[];
+  conclusion: string;
+}
+
+export interface LiteratureReviewResponse {
+  full_review: string;
+  papers: PaperMetadata[];
+  sections: ReviewSections;
+  error?: string;
+}

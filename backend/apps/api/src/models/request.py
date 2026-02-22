@@ -43,3 +43,27 @@ class UploadDocumentResponse(BaseModel):
     page_count: int = Field(..., description="Number of pages in the document")
     size_bytes: int = Field(..., description="File size in bytes")
     status: str = Field(..., description="Processing status")
+
+
+class DebateRequest(BaseModel):
+    """Request model for debate arena."""
+
+    document_ids: List[str] = Field(
+        ..., min_length=2, description="List of document IDs to debate (minimum 2)"
+    )
+    topic: Optional[str] = Field(None, description="Optional specific debate topic")
+    rounds: int = Field(5, ge=1, le=10, description="Number of debate rounds (1-10)")
+    humor_level: str = Field(
+        "medium", description="Humor level: 'low', 'medium', or 'high'"
+    )
+
+
+class LiteratureReviewRequest(BaseModel):
+    """Request model for literature review generation."""
+
+    document_ids: List[str] = Field(
+        ..., min_length=2, description="List of document IDs to review (minimum 2)"
+    )
+    research_topic: str = Field(
+        "Research Topic", description="Topic/title for the literature review"
+    )

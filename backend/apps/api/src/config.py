@@ -31,9 +31,14 @@ class Settings(BaseSettings):
     # PDF Storage
     pdf_storage_path: str = Field(default="./data/pdfs", alias="PDF_STORAGE_PATH")
 
-    # LLM Configuration
+    # LLM Configuration - Groq
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
-    groq_model: str = Field(default="llama-3.1-70b-versatile", alias="GROQ_MODEL")
+    groq_model: str = Field(default="openai/gpt-oss-20b", alias="GROQ_MODEL")
+
+    # LLM Configuration - NVIDIA
+    nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
+    nvidia_model: str = Field(default="deepseek-ai/deepseek-v3.2", alias="NVIDIA_MODEL")
+    nvidia_base_url: str = Field(default="https://integrate.api.nvidia.com/v1", alias="NVIDIA_BASE_URL")
 
     # Embedding Model
     embedding_model: str = Field(

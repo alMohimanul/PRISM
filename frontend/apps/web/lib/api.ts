@@ -4,6 +4,8 @@ import type {
   Session,
   ChatResponse,
   UploadResponse,
+  DebateResponse,
+  LiteratureReviewResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -91,6 +93,38 @@ export const chatApi = {
       message,
       agent_type: agentType,
       document_ids: documentIds,
+    });
+    return data;
+  },
+};
+
+// Debate
+export const debateApi = {
+  startDebate: async (
+    documentIds: string[],
+    topic?: string,
+    rounds: number = 3,  // Reduced to 3 for rate limiting
+    humorLevel: 'low' | 'medium' | 'high' = 'medium'
+  ): Promise<DebateResponse> => {
+    const { data } = await api.post('/api/debate/start', {
+      document_ids: documentIds,
+      topic,
+      rounds,
+      humor_level: humorLevel,
+    });
+    return data;
+  },
+};
+
+// Literature Review
+export const literatureReviewApi = {
+  generate: async (
+    documentIds: string[],
+    researchTopic: string = 'Research Topic'
+  ): Promise<LiteratureReviewResponse> => {
+    const { data } = await api.post('/api/literature-review/generate', {
+      document_ids: documentIds,
+      research_topic: researchTopic,
     });
     return data;
   },
