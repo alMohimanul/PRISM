@@ -4,7 +4,6 @@ import type {
   Session,
   ChatResponse,
   UploadResponse,
-  DebateResponse,
   LiteratureReviewResponse,
 } from '@/types';
 
@@ -93,24 +92,6 @@ export const chatApi = {
       message,
       agent_type: agentType,
       document_ids: documentIds,
-    });
-    return data;
-  },
-};
-
-// Debate
-export const debateApi = {
-  startDebate: async (
-    documentIds: string[],
-    topic?: string,
-    rounds: number = 3,  // Reduced to 3 for rate limiting
-    humorLevel: 'low' | 'medium' | 'high' = 'medium'
-  ): Promise<DebateResponse> => {
-    const { data } = await api.post('/api/debate/start', {
-      document_ids: documentIds,
-      topic,
-      rounds,
-      humor_level: humorLevel,
     });
     return data;
   },

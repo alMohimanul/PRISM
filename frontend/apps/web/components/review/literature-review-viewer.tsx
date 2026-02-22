@@ -7,7 +7,7 @@ import { LiteratureReviewResponse } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { BookOpen, Download, Sparkles } from 'lucide-react';
+import { BookOpen, Download } from 'lucide-react';
 
 interface LiteratureReviewViewerProps {
   documentIds: string[];

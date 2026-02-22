@@ -1,8 +1,7 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { MessageCircle, Swords, BookOpen } from 'lucide-react';
+import { MessageCircle, BookOpen } from 'lucide-react';
 
 export type ChatMode = 'ask' | 'review';
 
