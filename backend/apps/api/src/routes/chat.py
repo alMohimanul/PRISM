@@ -70,6 +70,13 @@ async def chat(request: ChatRequest) -> ChatResponse:
         confidence = result.get("confidence", 0.0)
         unsupported_spans = result.get("unsupported_spans", [])
 
+        # Log the response for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Chat response - text length: {len(response_text)}, sources: {len(sources)}, confidence: {confidence}")
+        if not response_text:
+            logger.warning(f"EMPTY RESPONSE! Full result: {result}")
+
         # Add assistant response to session
         await session_manager.add_message(
             session_id=request.session_id,

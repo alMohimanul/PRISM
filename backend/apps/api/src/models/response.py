@@ -150,3 +150,31 @@ class LiteratureReviewResponse(BaseModel):
     papers: List[PaperMetadata] = Field(..., description="Papers reviewed")
     sections: ReviewSections = Field(..., description="Individual sections")
     error: Optional[str] = Field(None, description="Error message if any")
+
+
+class PaperContext(BaseModel):
+    """Paper context in comparison."""
+
+    document_id: str = Field(..., description="Document ID")
+    title: str = Field(..., description="Paper title")
+    context: str = Field(..., description="Retrieved context")
+
+
+class ComparisonInsights(BaseModel):
+    """Insights from paper comparison."""
+
+    best_performers: Dict[str, str] = Field(..., description="Best paper per dimension")
+    common_patterns: List[str] = Field(..., description="Common methodologies/approaches")
+    key_differences: List[str] = Field(..., description="Key differences between papers")
+
+
+class PaperComparisonResponse(BaseModel):
+    """Paper comparison response."""
+
+    comparison_matrix: Dict[str, Dict[str, str]] = Field(
+        ..., description="Comparison matrix with dimensions and paper values"
+    )
+    markdown_table: str = Field(..., description="Formatted markdown table")
+    insights: ComparisonInsights = Field(..., description="Insights and analysis")
+    paper_contexts: List[PaperContext] = Field(..., description="Paper contexts used")
+    error: Optional[str] = Field(None, description="Error message if any")

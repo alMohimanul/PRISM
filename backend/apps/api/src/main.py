@@ -9,9 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .agents.literature_reviewer import LiteratureReviewerAgent
 # from .agents.debate_arena import DebateArenaAgent  # Disabled
-from .agents.literature_review_generator import LiteratureReviewGenerator
+# from .agents.literature_review_generator import LiteratureReviewGenerator  # Replaced with Paper Comparator
+from .agents.paper_comparator import PaperComparator
 from .config import settings
-from .routes import chat, documents, sessions, literature_review, cache  # debate disabled
+from .routes import chat, documents, sessions, cache, paper_comparison  # debate and literature_review disabled
 from .services.pdf_processor import PDFProcessor
 from .services.session_manager import SessionManager
 from .services.vector_store import VectorStoreService
@@ -34,7 +35,8 @@ llm_cache: LLMCache = None
 llm_client: MultiProviderLLMClient = None
 literature_agent: LiteratureReviewerAgent = None
 # debate_agent: DebateArenaAgent = None  # Disabled
-review_generator: LiteratureReviewGenerator = None
+# review_generator: LiteratureReviewGenerator = None  # Replaced with Paper Comparator
+paper_comparator: PaperComparator = None
 
 
 @asynccontextmanager
@@ -51,7 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Starting PRISM Research Assistant API")
 
     # Initialize services
-    global pdf_processor, vector_store, session_manager, llm_cache, llm_client, literature_agent, review_generator
+    global pdf_processor, vector_store, session_manager, llm_cache, llm_client, literature_agent, paper_comparator
 
     logger.info("Initializing PDF processor...")
     pdf_processor = PDFProcessor(
@@ -61,7 +63,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("Initializing vector store...")
     vector_store = VectorStoreService(
-        index_path=settings.faiss_index_path,
+        index_path=settings.vector_index_path,
         embedding_model=settings.embedding_model,
         reranker_model=settings.reranker_model if settings.enable_reranking else None,
         enable_reranking=settings.enable_reranking,
@@ -86,11 +88,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     llm_client = MultiProviderLLMClient(
         groq_api_key=settings.groq_api_key,
         groq_model=settings.groq_model,
-        nvidia_api_key=settings.nvidia_api_key,
-        nvidia_model=settings.nvidia_model,
-        nvidia_base_url=settings.nvidia_base_url,
-        min_request_interval=2.0,
-        max_retries=3,
+        gemini_api_key=settings.gemini_api_key,
+        gemini_model=settings.gemini_model,
+        min_request_interval=settings.llm_min_request_interval,
+        max_retries=settings.llm_max_retries,
         cache=llm_cache,
     )
 
@@ -110,8 +111,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     #     groq_model=settings.groq_model,
     # )
 
-    logger.info("Initializing Literature Review Generator...")
-    review_generator = LiteratureReviewGenerator(
+    # Literature Review Generator disabled - replaced with Paper Comparator
+    # logger.info("Initializing Literature Review Generator...")
+    # review_generator = LiteratureReviewGenerator(
+    #     vector_store=vector_store,
+    #     llm_client=llm_client,
+    # )
+
+    logger.info("Initializing Paper Comparator...")
+    paper_comparator = PaperComparator(
         vector_store=vector_store,
         llm_client=llm_client,
     )
@@ -121,7 +129,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     sessions.set_dependencies(session_manager)
     chat.set_dependencies(literature_agent, session_manager)
     # debate.set_dependencies(debate_agent)  # Disabled
-    literature_review.set_dependencies(review_generator)
+    # literature_review.set_dependencies(review_generator)  # Disabled
+    paper_comparison.set_dependencies(paper_comparator)
     cache.set_dependencies(llm_cache)
 
     logger.info("PRISM API started successfully")
@@ -156,7 +165,8 @@ app.include_router(documents.router)
 app.include_router(sessions.router)
 app.include_router(chat.router)
 # app.include_router(debate.router)  # Disabled
-app.include_router(literature_review.router)
+# app.include_router(literature_review.router)  # Disabled - replaced with paper_comparison
+app.include_router(paper_comparison.router)
 app.include_router(cache.router)
 
 

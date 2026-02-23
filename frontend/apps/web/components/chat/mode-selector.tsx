@@ -1,9 +1,9 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { MessageCircle, BookOpen } from 'lucide-react';
+import { MessageCircle, GitCompare } from 'lucide-react';
 
-export type ChatMode = 'ask' | 'review';
+export type ChatMode = 'ask' | 'compare';
 
 interface ModeSelectorProps {
   selectedMode: ChatMode;
@@ -24,14 +24,15 @@ export function ModeSelector({ selectedMode, onSelectMode, documentCount }: Mode
       minDocs: 0,
     },
     {
-      id: 'review' as ChatMode,
-      icon: BookOpen,
-      label: 'Review',
-      description: 'Generate literature review',
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/50',
+      id: 'compare' as ChatMode,
+      icon: GitCompare,
+      label: 'Paper Comparison',
+      description: 'Side-by-side analysis for 2-4 papers',
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/50',
       minDocs: 2,
+      maxDocs: 4,
     },
   ];
 
@@ -41,7 +42,9 @@ export function ModeSelector({ selectedMode, onSelectMode, documentCount }: Mode
         {modes.map((mode) => {
           const Icon = mode.icon;
           const isSelected = selectedMode === mode.id;
-          const isDisabled = documentCount < mode.minDocs;
+          const isTooFewDocs = documentCount < mode.minDocs;
+          const isTooManyDocs = mode.maxDocs && documentCount > mode.maxDocs;
+          const isDisabled = isTooFewDocs || isTooManyDocs;
 
           return (
             <Card
@@ -66,9 +69,14 @@ export function ModeSelector({ selectedMode, onSelectMode, documentCount }: Mode
                     <div className="text-xs text-muted-foreground mt-1">
                       {mode.description}
                     </div>
-                    {isDisabled && (
+                    {isTooFewDocs && (
                       <div className="text-xs text-red-400 mt-1">
                         Need {mode.minDocs}+ docs
+                      </div>
+                    )}
+                    {isTooManyDocs && (
+                      <div className="text-xs text-red-400 mt-1">
+                        Max {mode.maxDocs} docs
                       </div>
                     )}
                   </div>
@@ -89,8 +97,8 @@ export function ModeSelector({ selectedMode, onSelectMode, documentCount }: Mode
         {selectedMode === 'ask' && (
           <span>💬 Ask questions and get answers with citations</span>
         )}
-        {selectedMode === 'review' && (
-          <span>📚 Auto-generate comprehensive literature review</span>
+        {selectedMode === 'compare' && (
+          <span>📊 Compare papers across methodology, datasets, results, and limitations</span>
         )}
       </div>
     </div>

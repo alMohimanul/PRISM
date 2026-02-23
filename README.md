@@ -4,12 +4,12 @@ A multi-agent research assistant system that helps researchers manage papers, co
 
 ## Features
 
-- **PDF Ingestion Pipeline**: Upload research papers → Extract text/metadata → Chunk → Embed → Store in FAISS
+- **PDF Ingestion Pipeline**: Upload research papers → Extract text/metadata → Chunk → Embed → Store in zvec
 - **Session Management**: Create/load research sessions with context management using Redis
 - **RAG-based Literature Review**: Ask questions about papers and get intelligent, context-aware answers
 - **LLM-Powered Agent**: LangGraph-orchestrated agent using Groq (Llama 3.1 70B) for natural language understanding
 - **REST API**: FastAPI endpoints ready for frontend integration
-- **Vector Search**: FAISS-powered semantic search over research papers
+- **Vector Search**: zvec-powered semantic search over research papers (2x faster than FAISS)
 
 ## Tech Stack
 
@@ -17,7 +17,7 @@ A multi-agent research assistant system that helps researchers manage papers, co
 - **API Framework**: FastAPI
 - **Agent Orchestration**: LangGraph
 - **LLM**: Groq (Llama 3.1 70B)
-- **Vector Database**: FAISS
+- **Vector Database**: zvec (Alibaba's high-performance in-process vector database)
 - **Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
 - **Databases**: PostgreSQL (metadata) + Redis (sessions)
 - **PDF Processing**: PyMuPDF
@@ -277,8 +277,8 @@ MAX_FILE_SIZE_MB=50
 CHUNK_SIZE=1000
 CHUNK_OVERLAP=200
 
-# FAISS Vector Store
-FAISS_INDEX_PATH=./data/faiss_index
+# zvec Vector Store
+VECTOR_INDEX_PATH=./data/zvec_index
 ```
 
 ## Architecture
@@ -288,11 +288,11 @@ FAISS_INDEX_PATH=./data/faiss_index
 2. Extract text and metadata using PyMuPDF
 3. Split text into overlapping chunks (1000 chars with 200 overlap)
 4. Generate embeddings using sentence-transformers
-5. Store in FAISS index with metadata
+5. Store in zvec collection with metadata fields
 
 ### RAG Query Flow
 1. User sends question via `/api/chat`
-2. Literature Reviewer agent retrieves relevant chunks from FAISS (top-5)
+2. Literature Reviewer agent retrieves relevant chunks from zvec (top-5)
 3. Agent constructs prompt with context and sends to Groq LLM
 4. Response is returned with source citations
 5. Conversation stored in Redis for session continuity
@@ -333,10 +333,10 @@ Reinstall dependencies:
 make install-dev
 ```
 
-### FAISS index corruption
-Delete and rebuild the index:
+### zvec collection corruption
+Delete and rebuild the collection:
 ```bash
-rm -rf data/faiss_index
+rm -rf data/zvec_index
 # Re-upload your documents
 ```
 

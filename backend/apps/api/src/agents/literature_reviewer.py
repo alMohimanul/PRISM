@@ -1,12 +1,16 @@
 """Literature Reviewer Agent with RAG capabilities."""
 
+import asyncio
 import json
+import logging
 from typing import Any, Dict, List, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
 from ..services.vector_store import VectorStoreService
 from ..services.llm_provider import MultiProviderLLMClient
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict):
@@ -73,7 +77,41 @@ class LiteratureReviewerAgent:
 
         return workflow.compile()
 
-    def _retrieve_context(self, state: AgentState) -> AgentState:
+    async def _rate_limited_llm_call(
+        self,
+        messages: List[Dict[str, str]],
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        preferred_provider: Optional[str] = None,
+        use_cache: bool = True,
+    ) -> str:
+        """Wrapper for async LLM calls.
+
+        Args:
+            messages: Chat messages
+            temperature: Sampling temperature (0.0-1.0)
+            max_tokens: Maximum tokens to generate
+            preferred_provider: Preferred provider ("gemini" or "groq")
+            use_cache: Whether to use caching
+
+        Returns:
+            Generated response text
+        """
+        # Convert provider string to enum if specified
+        from ..services.llm_provider import Provider
+        provider_enum = None
+        if preferred_provider:
+            provider_enum = Provider.GEMINI if preferred_provider == "gemini" else Provider.GROQ
+
+        return await self.llm_client.chat_completion(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            preferred_provider=provider_enum,
+            use_cache=use_cache,
+        )
+
+    async def _retrieve_context(self, state: AgentState) -> AgentState:
         """Retrieve relevant context from vector store with intelligent section-aware strategy.
 
         Strategy:
@@ -95,9 +133,9 @@ class LiteratureReviewerAgent:
             # Phase 1: Detect query intent and target sections
             target_sections = self._detect_target_sections(query)
 
-            # Phase 2: Retrieve larger candidate pool
-            # We retrieve more candidates (top 30-50) for better section filtering
-            candidate_pool_size = min(50, self.reranker_top_k * 2)
+            # Phase 2: Retrieve candidate pool (heavily reduced for token management)
+            # Quality over quantity - fewer but more relevant chunks
+            candidate_pool_size = min(8, self.reranker_top_k)
 
             # Get document filters from state
             filter_document_id = state.get("document_id")
@@ -117,8 +155,9 @@ class LiteratureReviewerAgent:
             # Phase 4: Diversity filtering to avoid redundancy
             results = self._apply_diversity_filter(results)
 
-            # Phase 5: Select top 5 most representative chunks
-            results = results[:self.final_top_k]
+            # Phase 5: Select top 2 most representative chunks (heavily reduced for token limits)
+            # Quality over quantity - 2 highly relevant chunks are sufficient
+            results = results[:2]
 
             # Assign chunk IDs
             for i, r in enumerate(results):
@@ -127,7 +166,10 @@ class LiteratureReviewerAgent:
             state["context"] = results
             state["sources"] = []  # Will be populated after validation
 
+            logger.info(f"Retrieved {len(results)} chunks for query: {query[:50]}...")
+
         except Exception as e:
+            logger.error(f"Error retrieving context: {e}")
             state["error"] = f"Error retrieving context: {str(e)}"
             state["context"] = []
             state["sources"] = []
@@ -286,8 +328,63 @@ class LiteratureReviewerAgent:
 
         return diverse_results
 
+    def _compress_chunks_for_llm(
+        self, chunks: List[Dict[str, Any]], max_tokens: int = 3000
+    ) -> List[Dict[str, Any]]:
+        """Intelligently compress chunks to fit token budget while maintaining quality.
 
-    def _generate_draft(self, state: AgentState) -> AgentState:
+        Strategy:
+        1. Keep high-scoring chunks intact
+        2. Truncate lower-scoring chunks intelligently
+        3. Preserve key sentences with technical terms
+
+        Args:
+            chunks: List of chunks to compress
+            max_tokens: Maximum tokens for all chunks combined (~4 chars per token)
+
+        Returns:
+            Compressed chunks that fit within budget
+        """
+        # Rough estimation: 1 token ≈ 4 characters
+        max_chars = max_tokens * 4
+        compressed = []
+        total_chars = 0
+
+        for chunk in chunks:
+            text = chunk["text"]
+            chunk_chars = len(text)
+
+            # If adding this chunk would exceed budget
+            if total_chars + chunk_chars > max_chars:
+                remaining_chars = max_chars - total_chars
+
+                if remaining_chars < 200:  # Not enough space for meaningful content
+                    break
+
+                # Intelligently truncate: keep first sentences up to remaining budget
+                sentences = text.split('. ')
+                truncated_text = ""
+                for sent in sentences:
+                    if len(truncated_text) + len(sent) + 2 <= remaining_chars:
+                        truncated_text += sent + '. '
+                    else:
+                        break
+
+                if truncated_text:
+                    compressed_chunk = chunk.copy()
+                    compressed_chunk["text"] = truncated_text.strip()
+                    compressed.append(compressed_chunk)
+                    total_chars += len(truncated_text)
+                break
+            else:
+                # Add full chunk
+                compressed.append(chunk)
+                total_chars += chunk_chars
+
+        logger.info(f"Compressed {len(chunks)} chunks to {len(compressed)} chunks ({total_chars} chars)")
+        return compressed
+
+    async def _generate_draft(self, state: AgentState) -> AgentState:
         """Generate draft answer with chunk references.
 
         Args:
@@ -311,11 +408,16 @@ class LiteratureReviewerAgent:
             state["used_chunks"] = []
             return state
 
+        # Compress chunks intelligently to fit strict token budget
+        # Free tier limit: 8000 tokens total (input + output)
+        # Budget: 800 tokens (~3200 chars) for context to leave room for prompts
+        compressed_context = self._compress_chunks_for_llm(context, max_tokens=800)
+
         # Build context string with chunk IDs
         context_str = "\n\n".join(
             [
                 f"[{c['chunk_id']} - Document: {c['document_id']}]\n{c['text']}"
-                for c in context
+                for c in compressed_context
             ]
         )
 
@@ -358,14 +460,14 @@ Question: {query}
 JSON only:"""
 
         try:
-            # Call LLM using multi-provider client
-            response_text = self.llm_client.chat_completion(
+            # Call LLM using async wrapper (Gemini primary, Groq fallback)
+            response_text = await self._rate_limited_llm_call(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,  # Lower temperature for more focused responses
-                max_tokens=1024,
+                max_tokens=512,  # Reduced to manage token budget
             )
 
             # Try to extract JSON from response
@@ -425,14 +527,17 @@ JSON only:"""
                 chunk_ids = re.findall(r'\[c(\d+)\]', response_text)
                 state["used_chunks"] = [f"c{cid}" for cid in chunk_ids]
 
+            logger.info(f"Generated draft answer: {len(state['draft_answer'])} chars, {len(state['used_chunks'])} chunks")
+
         except Exception as e:
+            logger.error(f"Error generating draft: {e}")
             state["error"] = f"Error generating draft: {str(e)}"
             state["draft_answer"] = ""
             state["used_chunks"] = []
 
         return state
 
-    def _validate_grounding(self, state: AgentState) -> AgentState:
+    async def _validate_grounding(self, state: AgentState) -> AgentState:
         """Validate that the answer is grounded in the chunks.
 
         Args:
@@ -496,14 +601,14 @@ Referenced chunks:
 Check if each statement in the answer is supported by the chunks. Return JSON only."""
 
         try:
-            # Call LLM using multi-provider client
-            response_text = self.llm_client.chat_completion(
+            # Call LLM using async wrapper (Gemini primary, Groq fallback)
+            response_text = await self._rate_limited_llm_call(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.1,  # Very low temperature for validation
-                max_tokens=512,
+                max_tokens=256,  # Validation needs less tokens
             )
 
             # Extract JSON
@@ -532,6 +637,7 @@ Check if each statement in the answer is supported by the chunks. Return JSON on
 
         # Build final response with sources
         state["response"] = draft_answer
+        logger.info(f"Final response: {len(draft_answer)} chars, confidence: {state['confidence']}, sources: {len(context)}")
         state["sources"] = [
             {
                 "chunk_id": cid,
@@ -577,8 +683,8 @@ Check if each statement in the answer is supported by the chunks. Return JSON on
             "document_ids": document_ids,
         }
 
-        # Run the graph
-        final_state = self.graph.invoke(initial_state)
+        # Run the graph asynchronously
+        final_state = await self.graph.ainvoke(initial_state)
 
         return {
             "response": final_state["response"],

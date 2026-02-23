@@ -5,6 +5,8 @@ import type {
   ChatResponse,
   UploadResponse,
   LiteratureReviewResponse,
+  PaperComparisonResponse,
+  PaperComparisonFocus,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -106,6 +108,20 @@ export const literatureReviewApi = {
     const { data } = await api.post('/api/literature-review/generate', {
       document_ids: documentIds,
       research_topic: researchTopic,
+    });
+    return data;
+  },
+};
+
+// Paper Comparison
+export const paperComparisonApi = {
+  compare: async (
+    documentIds: string[],
+    focus: PaperComparisonFocus = 'all'
+  ): Promise<PaperComparisonResponse> => {
+    const { data } = await api.post('/api/paper-comparison/compare', {
+      document_ids: documentIds,
+      focus,
     });
     return data;
   },

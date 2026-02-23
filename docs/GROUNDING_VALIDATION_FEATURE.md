@@ -17,7 +17,7 @@ The agent now uses a 3-node graph:
 ```
 
 #### Node 1: Retrieve (unchanged)
-- Fetches top-5 relevant chunks from FAISS
+- Fetches top-5 relevant chunks from zvec
 - Assigns chunk IDs (`c1`, `c2`, etc.)
 - Stores chunks in state
 
@@ -112,7 +112,7 @@ interface Message {
 ## User Experience Flow
 
 1. **User asks a question**
-2. **System retrieves** top-5 chunks from FAISS
+2. **System retrieves** top-5 chunks from zvec
 3. **LLM drafts answer** with explicit chunk citations
 4. **Validator checks** each sentence against chunks
 5. **User sees:**

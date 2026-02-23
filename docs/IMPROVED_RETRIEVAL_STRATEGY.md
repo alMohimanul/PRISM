@@ -181,7 +181,7 @@ location = (document_id, page_number, chunk_index // 3)
 
 ### Default Settings
 ```python
-reranker_top_k = 20          # Initial FAISS retrieval
+reranker_top_k = 20          # Initial zvec retrieval
 candidate_pool_size = 40     # min(50, reranker_top_k * 2)
 final_top_k = 5              # Final chunks for LLM
 ```

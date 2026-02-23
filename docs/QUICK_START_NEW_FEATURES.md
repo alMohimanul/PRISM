@@ -13,7 +13,7 @@ pnpm add react-pdf pdfjs-dist
 
 ```bash
 cd /Users/Personal_Projects/PRISM
-mkdir -p data/pdfs data/faiss_index
+mkdir -p data/pdfs data/zvec_index
 ```
 
 ### 3. Update Environment Variables
