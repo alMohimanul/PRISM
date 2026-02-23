@@ -302,7 +302,7 @@ No config changes needed. API URL is auto-detected from `NEXT_PUBLIC_API_URL`.
 
 ### Backend Processing
 1. Query analyzed: contains "results" → boost `section_type: "results"` chunks by 15%
-2. FAISS retrieves top 20 candidates
+2. zvec retrieves top 20 candidates
 3. Cross-encoder reranks
 4. Section boosting adjusts scores
 5. Top 5 chunks selected

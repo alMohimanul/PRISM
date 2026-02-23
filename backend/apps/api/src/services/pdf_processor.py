@@ -1,4 +1,4 @@
-"""PDF processing service with PyMuPDF."""
+"""PDF processing service with PyMuPDF and semantic chunking."""
 
 import hashlib
 import re
@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import fitz  # PyMuPDF
+
+from .academic_chunker import AcademicPaperChunker, SemanticChunk
 
 
 class PDFChunk:
@@ -16,7 +18,7 @@ class PDFChunk:
         text: str,
         page_number: int,
         chunk_index: int,
-        metadata: Optional[Dict[str, str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         self.text = text
         self.page_number = page_number
@@ -25,26 +27,106 @@ class PDFChunk:
 
 
 class PDFProcessor:
-    """Service for processing PDF documents."""
+    """Service for processing PDF documents with advanced semantic chunking."""
 
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(
+        self,
+        chunk_size: int = 512,  # Tokens (chars will be ~2048)
+        chunk_overlap: int = 128,  # Tokens (chars will be ~512)
+        use_semantic_chunking: bool = True
+    ):
         """Initialize PDF processor.
 
         Args:
-            chunk_size: Maximum size of text chunks
-            chunk_overlap: Overlap between consecutive chunks
+            chunk_size: Target chunk size in tokens (~4 chars per token)
+            chunk_overlap: Overlap between consecutive chunks in tokens
+            use_semantic_chunking: Use AcademicPaperChunker for intelligent chunking
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.use_semantic_chunking = use_semantic_chunking
 
-    async def process_pdf(self, file_path: Path) -> Tuple[Dict[str, str], List[PDFChunk]]:
-        """Process a PDF file and extract metadata and chunks.
+        # Initialize academic chunker for semantic processing
+        if self.use_semantic_chunking:
+            self.semantic_chunker = AcademicPaperChunker(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+                min_chunk_size=100,
+                respect_section_boundaries=True
+            )
+
+    async def process_pdf(self, file_path: Path) -> Tuple[Dict[str, Any], List[PDFChunk]]:
+        """Process a PDF file and extract metadata and semantic chunks.
 
         Args:
             file_path: Path to the PDF file
 
         Returns:
-            Tuple of (metadata dict, list of PDFChunk objects)
+            Tuple of (metadata dict, list of PDFChunk objects with rich metadata)
+        """
+        if self.use_semantic_chunking:
+            # Use advanced semantic chunking
+            return await self._process_with_semantic_chunking(file_path)
+        else:
+            # Fallback to simple chunking
+            return await self._process_with_simple_chunking(file_path)
+
+    async def _process_with_semantic_chunking(
+        self, file_path: Path
+    ) -> Tuple[Dict[str, Any], List[PDFChunk]]:
+        """Process PDF with AcademicPaperChunker for semantic awareness.
+
+        Args:
+            file_path: Path to PDF file
+
+        Returns:
+            Tuple of (metadata, semantic chunks)
+        """
+        # Use AcademicPaperChunker
+        metadata, semantic_chunks = await self.semantic_chunker.process_pdf(str(file_path))
+
+        # Convert SemanticChunk to PDFChunk with full metadata
+        pdf_chunks = []
+        for sem_chunk in semantic_chunks:
+            chunk_metadata = {
+                # Basic fields
+                "page_number": sem_chunk.page_number,
+                "title": metadata.get("title", ""),
+                "year": metadata.get("year"),
+                "authors": metadata.get("authors", []),
+                "venue": metadata.get("venue", ""),
+                "abstract": metadata.get("abstract", ""),
+
+                # Semantic fields from SemanticChunk
+                "section": sem_chunk.section,
+                "section_type": sem_chunk.section_type,
+                "semantic_density": sem_chunk.semantic_density,
+                "contains_citation": sem_chunk.contains_citation,
+                "contains_equation": sem_chunk.contains_equation,
+                "contains_table_ref": sem_chunk.contains_table_ref,
+                "contains_figure_ref": sem_chunk.contains_figure_ref,
+            }
+
+            pdf_chunk = PDFChunk(
+                text=sem_chunk.text,
+                page_number=sem_chunk.page_number,
+                chunk_index=sem_chunk.chunk_index,
+                metadata=chunk_metadata
+            )
+            pdf_chunks.append(pdf_chunk)
+
+        return metadata, pdf_chunks
+
+    async def _process_with_simple_chunking(
+        self, file_path: Path
+    ) -> Tuple[Dict[str, str], List[PDFChunk]]:
+        """Fallback simple chunking (original implementation).
+
+        Args:
+            file_path: Path to PDF file
+
+        Returns:
+            Tuple of (metadata, chunks)
         """
         doc = fitz.open(file_path)
 

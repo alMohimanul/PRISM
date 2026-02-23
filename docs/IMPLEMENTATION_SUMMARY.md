@@ -31,7 +31,7 @@ This document summarizes all features implemented in this session.
 ## 2. Section-Aware Retrieval Boosting
 
 ### Problem Solved
-FAISS retrieval doesn't understand query intent. Asking "What are the results?" should prioritize chunks from the RESULTS section.
+zvec retrieval doesn't understand query intent. Asking "What are the results?" should prioritize chunks from the RESULTS section.
 
 ### Implementation
 Query intent detection with keyword mapping:
@@ -260,7 +260,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 2. **Create data directories**:
    ```bash
-   mkdir -p data/pdfs data/faiss_index
+   mkdir -p data/pdfs data/zvec_index
    ```
 
 3. **Re-upload existing PDFs** (to get new chunking):

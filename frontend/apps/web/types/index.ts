@@ -97,3 +97,26 @@ export interface LiteratureReviewResponse {
   sections: ReviewSections;
   error?: string;
 }
+
+// Paper Comparison types
+export type PaperComparisonFocus = 'all' | 'methodology' | 'datasets' | 'results';
+
+export interface PaperContext {
+  document_id: string;
+  title: string;
+  context: string;
+}
+
+export interface ComparisonInsights {
+  best_performers: Record<string, string>;
+  common_patterns: string[];
+  key_differences: string[];
+}
+
+export interface PaperComparisonResponse {
+  comparison_matrix: Record<string, Record<string, string>>;
+  markdown_table: string;
+  insights: ComparisonInsights;
+  paper_contexts: PaperContext[];
+  error?: string;
+}

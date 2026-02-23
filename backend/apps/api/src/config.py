@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
     # Vector Database (FAISS)
-    faiss_index_path: str = Field(default="./data/faiss_index", alias="FAISS_INDEX_PATH")
+    vector_index_path: str = Field(default="./data/faiss_index", alias="VECTOR_INDEX_PATH")
 
     # PDF Storage
     pdf_storage_path: str = Field(default="./data/pdfs", alias="PDF_STORAGE_PATH")
@@ -35,10 +35,11 @@ class Settings(BaseSettings):
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
     groq_model: str = Field(default="openai/gpt-oss-20b", alias="GROQ_MODEL")
 
-    # LLM Configuration - NVIDIA
-    nvidia_api_key: str = Field(default="", alias="NVIDIA_API_KEY")
-    nvidia_model: str = Field(default="deepseek-ai/deepseek-v3.2", alias="NVIDIA_MODEL")
-    nvidia_base_url: str = Field(default="https://integrate.api.nvidia.com/v1", alias="NVIDIA_BASE_URL")
+    # LLM Configuration - Gemini
+    gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-1.5-flash", alias="GEMINI_MODEL")
+    llm_min_request_interval: float = Field(default=2.0, alias="LLM_MIN_REQUEST_INTERVAL")
+    llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
 
     # Embedding Model
     embedding_model: str = Field(
@@ -50,8 +51,8 @@ class Settings(BaseSettings):
     reranker_model: str = Field(
         default="cross-encoder/ms-marco-MiniLM-L-6-v2", alias="RERANKER_MODEL"
     )
-    reranker_top_k: int = Field(default=20, alias="RERANKER_TOP_K")
-    final_top_k: int = Field(default=5, alias="FINAL_TOP_K")
+    reranker_top_k: int = Field(default=8, alias="RERANKER_TOP_K")  # Heavily reduced for free tier
+    final_top_k: int = Field(default=2, alias="FINAL_TOP_K")  # 2 highly relevant chunks
 
     # PDF Processing
     max_file_size_mb: int = Field(default=50, alias="MAX_FILE_SIZE_MB")

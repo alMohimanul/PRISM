@@ -97,7 +97,6 @@ tmp/
 
 # PRISM specific
 data/
-*.faiss
 *.pkl
 *.md
 !README.md

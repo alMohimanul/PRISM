@@ -67,3 +67,14 @@ class LiteratureReviewRequest(BaseModel):
     research_topic: str = Field(
         "Research Topic", description="Topic/title for the literature review"
     )
+
+
+class PaperComparisonRequest(BaseModel):
+    """Request model for paper comparison."""
+
+    document_ids: List[str] = Field(
+        ..., min_length=2, max_length=4, description="List of document IDs to compare (2-4 papers)"
+    )
+    focus: Optional[str] = Field(
+        "all", description="Focus area: 'methodology', 'datasets', 'results', or 'all'"
+    )

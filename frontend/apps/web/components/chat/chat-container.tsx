@@ -5,14 +5,14 @@ import { useMutation } from '@tanstack/react-query';
 import { MessageBubble } from './message';
 import { ChatInput } from './chat-input';
 import { ModeSelector, ChatMode } from './mode-selector';
-import { LiteratureReviewViewer } from '../review/literature-review-viewer';
+import { PaperComparisonViewer } from './review/paper-comparison-viewer';
 import { useAppStore } from '@/lib/store';
 import { chatApi } from '@/lib/api';
 import type { Message } from '@/types';
 import { Bot } from 'lucide-react';
 
 export function ChatContainer() {
-  const { currentSession, addMessage, getSessionMessages, selectedDocuments } = useAppStore();
+  const { currentSession, addMessage, selectedDocuments } = useAppStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -21,9 +21,11 @@ export function ChatContainer() {
   const [chatMode, setChatMode] = useState<ChatMode>('ask');
 
   // Get messages for current session from store
+  // Use sessionMessages directly to ensure reactivity
+  const { sessionMessages } = useAppStore();
   const messages = useMemo(() => {
-    return currentSession ? getSessionMessages(currentSession.session_id) : [];
-  }, [currentSession, getSessionMessages]);
+    return currentSession ? (sessionMessages[currentSession.session_id] || []) : [];
+  }, [currentSession, sessionMessages]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
   const scrollToBottom = useCallback(() => {
@@ -105,10 +107,10 @@ export function ChatContainer() {
 
   // Render based on selected mode
   const renderContent = () => {
-    // REVIEW MODE
-    if (chatMode === 'review') {
+    // COMPARE MODE
+    if (chatMode === 'compare') {
       return (
-        <LiteratureReviewViewer
+        <PaperComparisonViewer
           documentIds={Array.from(selectedDocuments)}
         />
       );

@@ -26,7 +26,7 @@ graph TB
     end
 
     subgraph "RAG Pipeline"
-        VS[FAISS Vector Store<br/>sentence-transformers]
+        VS[zvec Vector Store<br/>sentence-transformers]
         RR[Cross-Encoder Reranker<br/>ms-marco-MiniLM]
         DD[Context Deduplicator]
 
@@ -296,7 +296,7 @@ backend/apps/api/src/
 ├── services/
 │   ├── llm_provider.py                 # Multi-provider client with load balancing
 │   ├── llm_cache.py                    # Redis-backed LLM cache
-│   ├── vector_store.py                 # FAISS + reranking
+│   ├── vector_store.py                 # zvec + reranking
 │   ├── pdf_processor.py                # PDF extraction & chunking
 │   └── session_manager.py              # Redis session storage
 └── routes/

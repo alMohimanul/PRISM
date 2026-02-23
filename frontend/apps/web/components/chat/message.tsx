@@ -64,16 +64,17 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
       if (citationMatch) {
         const chunkId = part.replace('[', '').replace(']', ''); // c1, c2, etc.
+        const citationNumber = citationMatch[1]; // Extract the number
         const source = sourcesMap[chunkId];
 
         return (
           <button
             key={index}
             onClick={() => handleCitationClick(chunkId)}
-            className="inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[10px] font-mono font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 rounded transition-all hover:shadow-[0_0_8px_rgba(0,255,0,0.2)] cursor-pointer"
-            title={`View ${chunkId} in PDF (Page ${source?.page || '?'})`}
+            className="inline text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors"
+            title={`View source in PDF (Page ${source?.page || '?'})`}
           >
-            {part}
+            [{citationNumber}]
           </button>
         );
       }

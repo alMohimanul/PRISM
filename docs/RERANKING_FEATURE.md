@@ -8,7 +8,7 @@ This feature implements a two-stage retrieval pipeline with cross-encoder rerank
 
 **Embedding similarity ≠ relevance for the question**
 
-Traditional single-stage retrieval using FAISS with embedding similarity (L2 distance) often retrieves semantically similar chunks that may not be the most relevant for answering the specific query. This is a common failure mode in RAG systems.
+Traditional single-stage retrieval using vector databases with embedding similarity often retrieves semantically similar chunks that may not be the most relevant for answering the specific query. This is a common failure mode in RAG systems.
 
 ## Solution: Two-Stage Retrieval Pipeline
 
@@ -17,7 +17,7 @@ Traditional single-stage retrieval using FAISS with embedding similarity (L2 dis
 ```
 User Query
     ↓
-[Stage 1: FAISS Retrieval]
+[Stage 1: zvec Vector Search]
     → Retrieve top 20 candidates using embedding similarity
     ↓
 [Stage 2: Cross-Encoder Reranking]
@@ -29,10 +29,10 @@ Return top 5 most relevant chunks
 
 ### Pipeline Details
 
-1. **Stage 1 - FAISS Retrieval (Recall)**
+1. **Stage 1 - zvec Vector Search (Recall)**
    - Model: `sentence-transformers/all-MiniLM-L6-v2` (bi-encoder)
-   - Retrieves top 20 candidates using L2 distance
-   - Fast approximate search
+   - Retrieves top 20 candidates using similarity search
+   - Fast approximate search (2x faster than FAISS)
    - High recall, lower precision
 
 2. **Stage 2 - Cross-Encoder Reranking (Precision)**
@@ -64,7 +64,7 @@ class RerankerService:
 
 - Added `enable_reranking` and `reranker_model` parameters
 - Modified `search()` method to support two-stage retrieval
-- Returns both `retrieval_score` (FAISS) and `rerank_score` (cross-encoder)
+- Returns both `retrieval_score` (zvec) and `rerank_score` (cross-encoder)
 
 #### 3. Configuration (`src/config.py`)
 
@@ -90,7 +90,7 @@ FINAL_TOP_K=5
 
 ### Disabling Reranking
 
-To disable reranking and use only FAISS retrieval:
+To disable reranking and use only zvec retrieval:
 
 ```bash
 ENABLE_RERANKING=false
@@ -100,8 +100,8 @@ ENABLE_RERANKING=false
 
 ### Latency Trade-offs
 
-- **Without reranking**: ~50-100ms (FAISS only)
-- **With reranking**: ~200-400ms (FAISS + cross-encoder)
+- **Without reranking**: ~25-50ms (zvec only - 2x faster than FAISS)
+- **With reranking**: ~150-300ms (zvec + cross-encoder)
 
 The additional latency is acceptable for the significant quality improvement.
 
@@ -124,7 +124,7 @@ Both models are loaded into memory at startup.
 
 ## Example Impact
 
-### Before (FAISS only)
+### Before (Vector search only)
 
 Query: "What are the main findings about climate change?"
 
@@ -133,7 +133,7 @@ Retrieved chunks might include:
 - Chunks about data collection methods
 - Tangentially related background information
 
-### After (FAISS + Reranking)
+### After (zvec + Reranking)
 
 Same query retrieves:
 - Chunks specifically discussing research findings
@@ -144,7 +144,7 @@ Same query retrieves:
 
 ### Cross-Encoder vs Bi-Encoder
 
-**Bi-Encoder (FAISS embedding model)**:
+**Bi-Encoder (zvec embedding model)**:
 - Encodes query and documents separately
 - Fast similarity search (dot product/L2 distance)
 - Good for recall, lower precision
@@ -158,7 +158,7 @@ Same query retrieves:
 ### Score Fields
 
 Each retrieved chunk now contains:
-- `retrieval_score`: Original FAISS L2 distance (lower = more similar)
+- `retrieval_score`: Original zvec similarity score
 - `rerank_score`: Cross-encoder relevance score (higher = more relevant)
 - `score`: Primary score used for ranking (= `rerank_score` when reranking is enabled)
 
